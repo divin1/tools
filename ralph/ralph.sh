@@ -3,11 +3,12 @@
 # repo-maintain.sh - Repository Maintenance Tool
 #
 # Automatically detects project types in a repository (including monorepos),
-# checks for dependency updates, and applies patch-version-only updates.
+# checks for dependency updates, and applies patch (or patch + minor) updates.
 #
 # Usage: ./repo-maintain.sh <directory> [options]
 #
 # Options:
+#   --include-minor Also apply minor version updates
 #   --dry-run       Show what would be updated without applying
 #   --verbose       Enable verbose output
 #   --help          Show this help message
@@ -33,7 +34,7 @@ usage() {
 Repository Maintenance Tool
 
 Automatically detects project types in a repository (including monorepos),
-checks for dependency updates, and applies patch-version-only updates.
+checks for dependency updates, and applies patch (or patch + minor) updates.
 
 Usage: $(basename "$0") <directory> [options]
 
@@ -41,14 +42,16 @@ Arguments:
   <directory>      Path to the repository to maintain
 
 Options:
+  --include-minor  Also apply minor version updates (X.Y.Z -> X.Y+1.0)
   --dry-run        Show what would be updated without applying changes
   --verbose        Enable verbose output for debugging
   --help           Show this help message and exit
 
 Examples:
-  $(basename "$0") /path/to/repo                 # Update all projects
-  $(basename "$0") /path/to/repo --dry-run       # Preview updates only
-  $(basename "$0") /path/to/repo --verbose       # Verbose output
+  $(basename "$0") /path/to/repo                       # Patch updates only
+  $(basename "$0") /path/to/repo --include-minor       # Patch + minor updates
+  $(basename "$0") /path/to/repo --dry-run             # Preview updates only
+  $(basename "$0") /path/to/repo --verbose             # Verbose output
 
 Supported Ecosystems:
   - Node.js (npm, yarn, pnpm, bun)
@@ -66,6 +69,10 @@ parse_args() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
+            --include-minor)
+                INCLUDE_MINOR=true
+                shift
+                ;;
             --dry-run)
                 DRY_RUN=true
                 shift
@@ -160,6 +167,10 @@ main() {
 
     log_info "Repository Maintenance Tool"
     log_info "Target directory: $TARGET_DIR"
+
+    if [[ "$INCLUDE_MINOR" == "true" ]]; then
+        log_info "Mode: Including minor version updates"
+    fi
 
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "Mode: DRY-RUN (no changes will be made)"

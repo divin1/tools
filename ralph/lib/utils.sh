@@ -13,6 +13,7 @@ NC='\033[0m' # No Color
 # Global flags
 DRY_RUN=false
 VERBOSE=false
+INCLUDE_MINOR=false
 
 # Logging functions
 log_info() {
@@ -82,8 +83,8 @@ classify_update() {
     fi
 }
 
-# Check if update is patch-only
-# Returns 0 if patch-only, 1 otherwise
+# Check if update should be applied based on current flags
+# Returns 0 if applicable, 1 otherwise
 is_patch_update() {
     local current="$1"
     local available="$2"
@@ -94,6 +95,10 @@ is_patch_update() {
     log_verbose "Comparing $current -> $available (${update_type} update)"
 
     if [[ "$update_type" == "patch" ]]; then
+        return 0
+    fi
+
+    if [[ "$update_type" == "minor" && "$INCLUDE_MINOR" == "true" ]]; then
         return 0
     fi
 
@@ -170,14 +175,18 @@ print_summary() {
     echo "========================================"
 
     # Applied updates
+    local update_label="Patch updates applied"
+    if [[ "$INCLUDE_MINOR" == "true" ]]; then
+        update_label="Patch + minor updates applied"
+    fi
     if [[ $TOTAL_UPDATES -gt 0 ]]; then
-        echo -e "${GREEN}Patch updates applied: $TOTAL_UPDATES${NC}"
+        echo -e "${GREEN}${update_label}: $TOTAL_UPDATES${NC}"
         for entry in "${APPLIED_UPDATES[@]}"; do
             IFS='|' read -r pkg from to <<< "$entry"
             echo -e "  ${GREEN}✓${NC} $pkg: $from -> $to"
         done
     else
-        echo -e "Patch updates applied: 0"
+        echo -e "${update_label}: 0"
     fi
 
     echo ""
