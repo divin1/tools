@@ -198,12 +198,13 @@ main() {
     echo ""
 
     # Process each project
+    local project_index=0
     while IFS='|' read -r ecosystem pkg_manager project_dir; do
         [[ -z "$ecosystem" ]] && continue
 
-        echo "----------------------------------------"
+        project_index=$((project_index + 1))
+        log_project_header "$project_index" "$project_count" "$ecosystem" "$project_dir" "$pkg_manager"
         process_project "$ecosystem" "$pkg_manager" "$project_dir"
-        echo ""
     done <<< "$projects"
 
     # Print summary

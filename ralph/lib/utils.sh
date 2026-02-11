@@ -38,6 +38,69 @@ log_verbose() {
     fi
 }
 
+# Spinner for slow commands
+SPINNER_PID=""
+
+start_spinner() {
+    local msg="$1"
+    [[ ! -t 2 ]] && return
+    (
+        trap 'exit 0' TERM
+        local frames=('⠋' '⠙' '⠹' '⠸' '⠼' '⠴' '⠦' '⠧' '⠇' '⠏')
+        local i=0
+        while true; do
+            printf '\r  %s %s' "${frames[i]}" "$msg" >&2
+            i=$(( (i + 1) % ${#frames[@]} ))
+            sleep 0.1
+        done
+    ) &
+    SPINNER_PID=$!
+}
+
+stop_spinner() {
+    if [[ -n "$SPINNER_PID" ]]; then
+        kill "$SPINNER_PID" 2>/dev/null || true
+        wait "$SPINNER_PID" 2>/dev/null || true
+        printf '\r\033[K' >&2
+        SPINNER_PID=""
+    fi
+}
+
+trap stop_spinner EXIT
+
+# Project header with progress counter
+log_project_header() {
+    local index="$1"
+    local total="$2"
+    local ecosystem="$3"
+    local project_dir="$4"
+    local pkg_manager="$5"
+
+    local eco_label
+    case "$ecosystem" in
+        nodejs)  eco_label="Node.js" ;;
+        python)  eco_label="Python" ;;
+        rust)    eco_label="Rust" ;;
+        java)    eco_label="Java" ;;
+        go)      eco_label="Go" ;;
+        *)       eco_label="$ecosystem" ;;
+    esac
+
+    echo -e "\n${BLUE}[${index}/${total}]${NC} ${eco_label} · ${project_dir} (${pkg_manager})"
+}
+
+# Get human-readable label for update type
+update_type_label() {
+    local current="$1"
+    local available="$2"
+    local update_type
+    update_type=$(classify_update "$current" "$available")
+    case "$update_type" in
+        minor) echo "Minor" ;;
+        *)     echo "Patch" ;;
+    esac
+}
+
 # Parse semver version string
 # Returns: major minor patch (space-separated)
 parse_semver() {
@@ -150,6 +213,7 @@ track_skip_versioned() {
     update_type=$(classify_update "$current" "$available")
 
     TOTAL_SKIPPED=$((TOTAL_SKIPPED + 1))
+    echo -e "  ${GRAY}↳ ${pkg} ${current} -> ${available} (${update_type}, skipped)${NC}"
 
     if [[ "$update_type" == "major" ]]; then
         SKIPPED_MAJOR+=("${pkg}|${current}|${available}")

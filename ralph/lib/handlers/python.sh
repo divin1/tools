@@ -7,8 +7,6 @@ handle_python() {
     local project_dir="$1"
     local pkg_manager="$2"
 
-    log_info "Processing Python project: $project_dir (using $pkg_manager)"
-
     cd "$project_dir" || return 1
 
     case "$pkg_manager" in
@@ -42,7 +40,9 @@ handle_pip_updates() {
     log_verbose "Checking for outdated pip packages..."
 
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(pip list --outdated --format=json 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" || "$outdated_json" == "[]" ]]; then
         log_info "No outdated packages found"
@@ -59,7 +59,7 @@ handle_pip_updates() {
         latest=$(echo "$outdated_json" | jq -r ".[$i].latest_version")
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $pkg $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $pkg $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $latest"
@@ -113,7 +113,9 @@ handle_poetry_updates() {
     log_verbose "Checking for outdated poetry packages..."
 
     local outdated_output
+    start_spinner "Checking for outdated packages"
     outdated_output=$(poetry show --outdated 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_output" ]]; then
         log_info "No outdated packages found"
@@ -138,7 +140,7 @@ handle_poetry_updates() {
         [[ "$current" == "current" ]] && continue
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $pkg $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $pkg $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $latest"
@@ -203,7 +205,9 @@ handle_uv_project_updates() {
     # Get outdated packages using uv tree or by comparing lock file
     # uv doesn't have a direct --outdated command yet, so we check via pip
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(uv pip list --outdated --format=json 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" || "$outdated_json" == "[]" ]]; then
         log_info "No outdated packages found"
@@ -221,7 +225,7 @@ handle_uv_project_updates() {
         latest=$(echo "$outdated_json" | jq -r ".[$i].latest_version")
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $pkg $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $pkg $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $latest"
@@ -258,7 +262,9 @@ handle_uv_pip_updates() {
     log_verbose "Checking for outdated packages (uv pip mode)..."
 
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(uv pip list --outdated --format=json 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" || "$outdated_json" == "[]" ]]; then
         log_info "No outdated packages found"
@@ -275,7 +281,7 @@ handle_uv_pip_updates() {
         latest=$(echo "$outdated_json" | jq -r ".[$i].latest_version")
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $pkg $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $pkg $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $latest"
@@ -307,7 +313,9 @@ handle_pipenv_updates() {
     log_verbose "Checking for outdated pipenv packages..."
 
     local outdated_output
+    start_spinner "Checking for outdated packages"
     outdated_output=$(pipenv update --outdated 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_output" ]]; then
         log_info "No outdated packages found"
@@ -330,7 +338,7 @@ handle_pipenv_updates() {
         fi
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $pkg $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $pkg $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $latest"

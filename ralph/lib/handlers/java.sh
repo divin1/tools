@@ -7,8 +7,6 @@ handle_java() {
     local project_dir="$1"
     local pkg_manager="$2"
 
-    log_info "Processing Java project: $project_dir (using $pkg_manager)"
-
     cd "$project_dir" || return 1
 
     case "$pkg_manager" in
@@ -36,7 +34,9 @@ handle_maven_updates() {
     log_verbose "Checking for outdated Maven dependencies..."
 
     local updates_output
+    start_spinner "Checking for outdated dependencies"
     updates_output=$(mvn versions:display-dependency-updates -DprocessDependencyManagement=false 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$updates_output" ]]; then
         log_info "No outdated dependencies found"
@@ -60,7 +60,7 @@ handle_maven_updates() {
         fi
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $artifact $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $artifact $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $artifact to $latest"
@@ -103,7 +103,9 @@ handle_gradle_updates() {
 
     # Check if gradle-versions-plugin is available
     local updates_output
+    start_spinner "Checking for outdated dependencies"
     updates_output=$($gradle_cmd dependencyUpdates -Drevision=release --no-daemon 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$updates_output" ]]; then
         log_warn "Could not check for updates. Ensure gradle-versions-plugin is configured."
@@ -147,7 +149,7 @@ parse_gradle_json_report() {
         local artifact="${group}:${name}"
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $artifact $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $artifact $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $artifact to $latest"
@@ -180,7 +182,7 @@ parse_gradle_text_output() {
         fi
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $artifact $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $artifact $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $artifact to $latest"

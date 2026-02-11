@@ -7,8 +7,6 @@ handle_rust() {
     local project_dir="$1"
     local pkg_manager="$2"
 
-    log_info "Processing Rust project: $project_dir"
-
     if ! check_dependency "cargo"; then
         log_error "cargo not found, skipping project"
         track_failure "missing_package_manager"
@@ -33,7 +31,9 @@ handle_cargo_outdated() {
     log_verbose "Checking for outdated cargo packages..."
 
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(cargo outdated --format json 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" ]]; then
         log_info "No outdated packages found"
@@ -61,7 +61,7 @@ handle_cargo_outdated() {
         [[ "$current" == "---" ]] && continue
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $pkg $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $pkg $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $latest"
@@ -86,7 +86,9 @@ handle_cargo_update_fallback() {
     log_verbose "Using cargo update --dry-run to check for updates..."
 
     local update_output
+    start_spinner "Checking for outdated packages"
     update_output=$(cargo update --dry-run 2>&1) || true
+    stop_spinner
 
     if [[ -z "$update_output" ]]; then
         log_info "No updates available"
@@ -109,7 +111,7 @@ handle_cargo_update_fallback() {
         fi
 
         if is_patch_update "$current" "$latest"; then
-            log_info "Patch update available: $pkg $current -> $latest"
+            log_info "$(update_type_label "$current" "$latest") update: $pkg $current -> $latest"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $latest"

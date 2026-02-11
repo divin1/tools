@@ -7,8 +7,6 @@ handle_go() {
     local project_dir="$1"
     local pkg_manager="$2"
 
-    log_info "Processing Go project: $project_dir"
-
     if ! check_dependency "go"; then
         log_error "go not found, skipping project"
         track_failure "missing_package_manager"
@@ -25,7 +23,9 @@ handle_go_modules() {
     log_verbose "Checking for outdated Go modules..."
 
     local updates_json
+    start_spinner "Checking for outdated modules"
     updates_json=$(go list -m -u -json all 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$updates_json" ]]; then
         log_info "No modules found or error checking updates"
@@ -95,7 +95,7 @@ handle_go_modules() {
         found_updates=true
 
         if is_patch_update "$current" "$update_info"; then
-            log_info "Patch update available: $path $current -> $update_info"
+            log_info "$(update_type_label "$current" "$update_info") update: $path $current -> $update_info"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $path to $update_info"

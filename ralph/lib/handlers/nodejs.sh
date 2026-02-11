@@ -7,8 +7,6 @@ handle_nodejs() {
     local project_dir="$1"
     local pkg_manager="$2"
 
-    log_info "Processing Node.js project: $project_dir (using $pkg_manager)"
-
     # Check if package manager is available
     if ! check_dependency "$pkg_manager"; then
         log_error "Package manager '$pkg_manager' not found, skipping project"
@@ -43,7 +41,9 @@ handle_npm_updates() {
     log_verbose "Checking for outdated npm packages..."
 
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(npm outdated --json 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" || "$outdated_json" == "{}" ]]; then
         log_info "No outdated packages found"
@@ -66,7 +66,7 @@ handle_npm_updates() {
 
         # Check if wanted version is a patch update
         if is_patch_update "$current" "$wanted"; then
-            log_info "Patch update available: $pkg $current -> $wanted"
+            log_info "$(update_type_label "$current" "$wanted") update: $pkg $current -> $wanted"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $wanted"
@@ -91,7 +91,9 @@ handle_yarn_updates() {
     log_verbose "Checking for outdated yarn packages..."
 
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(yarn outdated --json 2>/dev/null | grep '"type":"table"' | head -1) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" ]]; then
         log_info "No outdated packages found"
@@ -117,7 +119,7 @@ handle_yarn_updates() {
         latest=$(echo "$row" | jq -r '.[3]')
 
         if is_patch_update "$current" "$wanted"; then
-            log_info "Patch update available: $pkg $current -> $wanted"
+            log_info "$(update_type_label "$current" "$wanted") update: $pkg $current -> $wanted"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $wanted"
@@ -142,7 +144,9 @@ handle_pnpm_updates() {
     log_verbose "Checking for outdated pnpm packages..."
 
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(pnpm outdated --json 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" || "$outdated_json" == "{}" || "$outdated_json" == "[]" ]]; then
         log_info "No outdated packages found"
@@ -164,7 +168,7 @@ handle_pnpm_updates() {
         [[ -z "$current" ]] && continue
 
         if is_patch_update "$current" "$wanted"; then
-            log_info "Patch update available: $pkg $current -> $wanted"
+            log_info "$(update_type_label "$current" "$wanted") update: $pkg $current -> $wanted"
 
             if [[ "$DRY_RUN" == "true" ]]; then
                 log_info "[DRY-RUN] Would update $pkg to $wanted"
@@ -190,7 +194,9 @@ handle_bun_updates() {
 
     # Bun doesn't have a native outdated command yet, use npm compatibility
     local outdated_json
+    start_spinner "Checking for outdated packages"
     outdated_json=$(bun pm ls --json 2>/dev/null) || true
+    stop_spinner
 
     if [[ -z "$outdated_json" ]]; then
         log_warn "Could not check outdated packages with bun"
